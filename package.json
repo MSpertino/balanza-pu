@@ -1,0 +1,13 @@
+{
+  "name": "balanza-pu",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MVP local de formulación y trazabilidad con balanza digital",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

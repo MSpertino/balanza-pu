@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Balanza | Formulación</title><link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main>
+    <header><div><p class="eyebrow">PLANTA · TRAZABILIDAD</p><h1>Balanza de formulación</h1></div><a class="secondary" href="/api/export.csv">Exportar registros</a></header>
+    <section class="card" id="start-card">
+      <h2>Comenzar una formulación</h2><p class="muted">Escaneá o ingresá el código SAP del producto antes de pesar.</p>
+      <div class="start-row"><input id="product" placeholder="Ej.: SAP-001" autofocus><button id="start">Iniciar</button></div><p id="start-error" class="error"></p>
+      <div id="products" class="chips"></div>
+    </section>
+    <section class="card hidden" id="work-card">
+      <div class="work-head"><div><p class="eyebrow">FORMULACIÓN ACTIVA</p><h2 id="product-name"></h2><p id="session-id" class="muted"></p></div><span id="status" class="status">INICIADA</span></div>
+      <div class="scale"><span>PESO ACTUAL</span><strong id="weight">0.000</strong><small>kg</small></div>
+      <div class="simulator"><label>Lectura total de la balanza (simulada)<input id="simulated" type="number" min="0" step="0.001" value="0"></label><button class="secondary" id="apply-weight">Actualizar lectura</button><p class="hint">Ejemplo: primer material 2,5 kg; segundo material 7,5 kg. Se registran 2,5 kg y luego 5 kg.</p></div>
+      <div class="actions"><button class="secondary" id="zero">Poner balanza en 0</button><button id="record">Registrar material</button></div>
+      <h3>Materiales registrados</h3><div id="entries" class="entries"><p class="muted">Todavía no hay materiales registrados.</p></div>
+      <div class="finish"><button class="secondary" id="finish">Finalizar formulación</button><button class="secondary" id="new">Nueva formulación</button></div>
+      <p id="work-error" class="error"></p>
+    </section>
+  </main><script type="module" src="/app.js"></script>
+</body></html>

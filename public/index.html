@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,19 +7,25 @@
 <body>
   <main>
     <header><div><p class="eyebrow">PLANTA · TRAZABILIDAD</p><h1>Balanza de formulación</h1></div><a class="secondary" href="/api/export.csv">Exportar registros</a></header>
+    <p class="notice">Prototipo con peso simulado. Recetas y tolerancias de demostración: pendientes de validación en planta.</p>
     <section class="card" id="start-card">
-      <h2>Comenzar una formulación</h2><p class="muted">Escaneá o ingresá el código SAP del producto antes de pesar.</p>
-      <div class="start-row"><input id="product" placeholder="Ej.: SAP-001" autofocus><button id="start">Iniciar</button></div><p id="start-error" class="error"></p>
-      <div id="products" class="chips"></div>
+      <h2>Comenzar una formulación</h2><p class="muted">Ingresá el producto SAP. Primero se pesa el poliol; los aditivos se calculan según su peso real.</p>
+      <label for="operator">Operador</label><input id="operator" placeholder="Nombre del operador">
+      <label for="polyol">Poliol cargado (kg)</label><input id="polyol" type="number" min="0.001" max="1000000" step="any" value="190"><div class="chips"><button class="chip" data-polyol="190">Tanque entero ? 190 kg</button><button class="chip" data-polyol="95">Medio ? 95 kg</button><button class="chip" data-polyol="142.5">? ? 142,5 kg</button></div><label><input type="checkbox" id="polyol-valid"> Valid? la carga de poliol</label><label><input type="checkbox" id="iso-valid"> Valid? la carga de isocianato</label><p class="hint">Ambos componentes se dosifican aparte. Aqu? solo se registra su validaci?n.</p><label for="product">Producto SAP</label><div class="start-row"><input id="product" placeholder="Ej.: SAP-001" autofocus><button id="start">Iniciar</button></div>
+      <p id="start-error" class="error" role="alert"></p><div id="products" class="chips"></div>
+      <h3>Formulaciones guardadas</h3><div id="sessions" class="chips"></div>
     </section>
     <section class="card hidden" id="work-card">
-      <div class="work-head"><div><p class="eyebrow">FORMULACIÓN ACTIVA</p><h2 id="product-name"></h2><p id="session-id" class="muted"></p></div><span id="status" class="status">INICIADA</span></div>
-      <div class="scale"><span>PESO ACTUAL</span><strong id="weight">0.000</strong><small>kg</small></div>
-      <div class="simulator"><label>Lectura total de la balanza (simulada)<input id="simulated" type="number" min="0" step="0.001" value="0"></label><button class="secondary" id="apply-weight">Actualizar lectura</button><p class="hint">Ejemplo: primer material 2,5 kg; segundo material 7,5 kg. Se registran 2,5 kg y luego 5 kg.</p></div>
-      <div class="actions"><button class="secondary" id="zero">Poner balanza en 0</button><button id="record">Registrar material</button></div>
-      <h3>Materiales registrados</h3><div id="entries" class="entries"><p class="muted">Todavía no hay materiales registrados.</p></div>
-      <div class="finish"><button class="secondary" id="finish">Finalizar formulación</button><button class="secondary" id="new">Nueva formulación</button></div>
-      <p id="work-error" class="error"></p>
+      <div class="work-head"><div><p class="eyebrow">FORMULACIÓN</p><h2 id="product-name"></h2><p id="session-id" class="muted"></p></div><span id="status" class="status"></span></div>
+      <h3 id="step"></h3><p id="target"></p><div id="signal" class="signal" role="status" aria-live="polite"></div>
+      <div class="scale"><span>PESO DEL MATERIAL ACTUAL</span><strong id="weight">0</strong><small>kg</small><p id="gross"></p></div>
+      <div class="simulator"><label for="simulated">Lectura total de la balanza (simulada)<input id="simulated" type="number" min="0" max="1000000" step="0.000001" value="0"></label><button class="secondary" id="apply-weight">Actualizar lectura</button><p class="hint">La lectura es acumulada. Ejemplo: poliol 5 kg → OK; agua 2,5 kg → ingresá 7,5 kg de lectura total. Cada OK registra y aplica tara automáticamente.</p></div>
+      <div class="actions"><button class="secondary" id="zero">Tarar recipiente inicial</button><button id="record">OK · Registrar y tarar</button></div>
+      <details><summary>Corregir un aditivo</summary><p>Para reiniciar el actual, retiralo hasta que el peso actual vuelva a cero. Para repetir el último confirmado, retiralo junto con cualquier carga pendiente hasta recuperar la lectura total anterior. Las pesadas anuladas se conservan.</p><div class="actions"><button class="secondary" id="reset">Reiniciar aditivo actual</button><button class="secondary" id="undo">Repetir último aditivo</button></div></details>
+      <h3>Fórmula proporcional</h3><div id="recipe"></div>
+      <h3>Pesadas registradas</h3><div id="entries" class="entries"></div>
+      <div class="finish"><button class="secondary" id="refresh">Actualizar estado</button><button class="secondary" id="finish">Finalizar formulación</button><button class="secondary" id="new">Volver al inicio</button></div>
+      <p id="work-error" class="error" role="alert"></p>
     </section>
   </main><script type="module" src="/app.js"></script>
 </body></html>

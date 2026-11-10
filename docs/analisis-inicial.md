@@ -78,3 +78,15 @@ Una balanza, un producto y una fórmula real. Comparar registros con el método 
 ### Fase 5 — servidor e integración
 
 Publicar en intranet, documentar operación y seguridad, y conectar el formato aprobado por SAP.
+
+## Actualización 10/11/2026 — reglas de la reunión
+
+La documentación base vigente es [el PDF](./_documentacion_base.pdf). Esta actualización reemplaza las suposiciones anteriores del prototipo sobre peso de poliol, tolerancias fijas y datos volátiles:
+
+- Poliol ingresado manualmente; referencia de fórmula de 190 kg. Poliol e isocianato se validan y registran fuera de la balanza de aditivos.
+- Objetivos proporcionales sin redondeo intermedio y tolerancia porcentual por aditivo.
+- Amarillo por debajo, verde dentro del rango, rojo por encima. OK solo en verde; tara bloqueada en rojo.
+- OK registra y tara. Reinicio individual con retiro físico del material y conservación del historial.
+- Persistencia local en JSON; lógica de negocio exclusivamente en el servidor.
+
+Las recetas y porcentajes incluidos siguen siendo demostrativos. Falta confirmar recetas reales, identificación de materiales, procedimiento de jarras, precisión del hardware y permisos para uso en planta. La selección de proveedor/versiones y el registro detallado de cantidades de isocianato quedan pendientes.

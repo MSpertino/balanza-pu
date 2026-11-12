@@ -43,7 +43,11 @@ node server.js
 
 Acceder desde otra máquina con `http://IP-DEL-SERVIDOR:3000`. El acceso requiere conectividad y regla de firewall. Autenticación, permisos y conexión ESP32/HX711 están pendientes. `DATA_FILE` permite elegir otra ruta de almacenamiento.
 
-## Verificación
+## Prueba inicial de hardware
+
+El proyecto PlatformIO y las instrucciones de conexión, carga, tara y calibración están en [firmware-balanza](firmware-balanza/README.md). Esta prueba utiliza el monitor serie; la integración de sus lecturas con la web está pendiente.
+
+## Pruebas de la aplicación
 
 ```powershell
 node --test

@@ -94,7 +94,10 @@ void loop() {
     operation = Operation::None;
     event("operation_timeout");
   }
-  if (scale.is_ready()) {
+  bool hx711Ready = scale.is_ready();
+  if (hx711Ready) {
+    // Diagnóstico temporal: DOUT debería estar LOW cuando hay una muestra lista.
+    int doutLevel = digitalRead(PIN_DOUT);
     long raw = scale.read();
     lastSample = now;
     if (raw <= -8388607L || raw >= 8388606L) {
@@ -102,7 +105,7 @@ void loop() {
       sampleCount = 0;
       if (now - lastReport >= 100) {
         lastReport = now;
-        Serial.printf("{\"g\":null,\"raw\":%ld,\"stable\":false,\"btn\":%s,\"error\":\"hx711_saturated\"}\n", raw, buttonPressed ? "true" : "false");
+        Serial.printf("{\"hx711_ready\":true,\"dout_before_read\":%s,\"g\":null,\"raw\":%ld,\"stable\":false,\"btn\":%s,\"error\":\"hx711_saturated\"}\n", doutLevel == LOW ? "LOW" : "HIGH", raw, buttonPressed ? "true" : "false");
       }
       delay(1);
       return;
@@ -143,7 +146,7 @@ void loop() {
         }
         stable = (static_cast<double>(high) - low) / fabsf(countsPerGram) <= STABLE_RANGE_G;
       }
-      Serial.print("{\"g\":");
+      Serial.printf("{\"hx711_ready\":true,\"dout_before_read\":%s,\"g\":", doutLevel == LOW ? "LOW" : "HIGH");
       if (valid) Serial.print((static_cast<double>(raw) - zeroOffset) / countsPerGram, 2);
       else Serial.print("null");
       Serial.printf(",\"raw\":%ld,\"stable\":%s,\"btn\":%s,\"calibrated\":%s,\"tared\":%s}\n",
@@ -151,7 +154,7 @@ void loop() {
     }
   } else if (now - lastSample >= 2000 && now - lastReport >= 1000) {
     lastReport = now;
-    Serial.printf("{\"g\":null,\"raw\":null,\"stable\":false,\"btn\":%s,\"error\":\"hx711_timeout\"}\n", buttonPressed ? "true" : "false");
+    Serial.printf("{\"hx711_ready\":false,\"dout\":%s,\"g\":null,\"raw\":null,\"stable\":false,\"btn\":%s,\"error\":\"hx711_timeout\"}\n", digitalRead(PIN_DOUT) == LOW ? "LOW" : "HIGH", buttonPressed ? "true" : "false");
   }
   delay(1);
 }

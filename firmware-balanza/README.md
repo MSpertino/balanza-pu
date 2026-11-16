@@ -1,6 +1,16 @@
-# Prueba USB de ESP32 + HX711
+# ESP32 + HX711 — balanza Wi-Fi
 
-Proyecto independiente de PlatformIO. La web sigue usando el simulador: este firmware prueba primero la medición por monitor serie y no registra preparaciones.
+Proyecto independiente de PlatformIO. El firmware mide con HX711, conserva calibración en NVS, ofrece un portal `Balanza-Setup` para configurar Wi-Fi/API/token y publica telemetría al servidor.
+
+## Instalación Wi-Fi
+
+1. Subir el firmware por USB y abrir el monitor serie a 115200.
+2. Si no existe configuración guardada, conectar el celular/notebook a `Balanza-Setup`.
+3. Abrir `192.168.4.1` y completar SSID, contraseña, URL base de API, ID y token.
+4. Para la primera prueba local usar la IP de la máquina que ejecuta Node, por ejemplo `http://192.168.1.10:3000`.
+5. La placa se registra y envía telemetría al servidor cada segundo.
+
+El token inicial de prueba es `demo-device-token`; cambiarlo antes de usar la red real. HTTPS está soportado por URL, pero el firmware usa certificado inseguro solo para la primera prueba. En producción hay que instalar la CA interna y retirar `setInsecure()`.
 
 ## Cableado
 

@@ -1,0 +1,136 @@
+EXPORTACION DEL CHAT - PROBLEMAS DE BUILD Y UPLOAD ESP32
+Fecha: 2026-11-17
+Proyecto: firmware-balanza
+
+USUARIO
+El build y el upload de PlatformIO no funcionan. El proyecto usa platformio.ini.
+
+CONFIGURACION INICIAL
+[platformio]
+src_dir = src-wifi
+
+[env:esp32dev]
+platform = espressif32
+board = esp32dev
+framework = arduino
+monitor_speed = 115200
+monitor_port = COM6
+monitor_filters = send_on_enter
+lib_deps = bogde/HX711@^0.7.5
+upload_port = COM6
+upload_speed = 115200
+
+ERROR INICIAL
+PlatformIO compilaba correctamente y fallaba al subir:
+
+esptool v5.4.0
+Serial port COM6:
+Connecting.....................................................
+ERROR: A fatal error occurred: Failed to connect to ESP32: No serial data received.
+
+DIAGNOSTICO DEL PUERTO
+PlatformIO detecto:
+
+COM6
+Hardware ID: USB VID:PID=10C4:EA60 SER=0001 LOCATION=1-2
+Description: Silicon Labs CP210x USB to UART Bridge (COM6)
+
+COM5 y COM3 fueron identificados como puertos Bluetooth y no corresponden al ESP32.
+
+El build termino correctamente. El error aparecia durante la comunicacion con el bootloader, no durante la compilacion.
+
+PRUEBAS REALIZADAS
+1. Se explico que habia que cerrar el Serial Monitor porque podia ocupar COM6.
+2. Se probo el procedimiento BOOT + EN/RST para entrar manualmente al bootloader.
+3. Se cambio temporalmente upload_flags de:
+   --before=default_reset
+   a:
+   --before=no_reset
+   para usar el modo manual.
+4. La prueba directa con esptool se ejecuto desde:
+   C:\Users\mspertino\.platformio\packages\tool-esptool\esptool.exe
+5. Se comprobo que el modulo Python esptool no estaba instalado en el interprete de PlatformIO, pero el ejecutable esptool.exe si estaba disponible.
+6. Se ejecuto esptool con --before no-reset y con --before default-reset.
+7. Ambos modos devolvieron No serial data received.
+8. La prueba esptool --trace mostro:
+   Write 46 bytes
+   No serial data received
+   Esto demostro que la PC envia datos, pero no recibe respuesta del ESP32.
+9. Se abrio el puerto con System.IO.Ports.SerialPort. En una prueba el puerto estaba ocupado; despues se detectaron dos procesos de PlatformIO Home.
+10. Se cerraron los procesos de PlatformIO Home y PowerShell pudo abrir COM6:
+    COM6 ABIERTO
+    DTR=False
+    RTS=False
+    COM6 CERRADO
+11. Aunque el puerto quedo libre, esptool continuo sin recibir respuesta.
+12. Se probo el monitor serial a 115200 y, al reiniciar la placa, no se recibieron mensajes de arranque.
+
+DRIVER CP210x
+Se consulto el driver instalado:
+
+DeviceName: Silicon Labs CP210x USB to UART Bridge
+DriverVersion: 11.6.0.420
+DriverProviderName: Silicon Laboratories Inc.
+InfName: oem20.inf
+IsSigned: True
+
+El driver se desinstalo y se volvio a instalar desde el paquete oficial de Silicon Labs:
+CP210x_Universal_Windows_Driver.zip
+
+El dispositivo volvio a aparecer como COM6 con VID/PID 10C4:EA60.
+El paquete anterior no pudo eliminarse fisicamente por Acceso denegado, pero fue desinstalado del dispositivo y vuelto a asociar con el paquete oficial.
+
+Se verifico la pagina oficial:
+https://www.silabs.com/software-and-tools/usb-to-uart-bridge-vcp-drivers?tab=downloads
+
+RESULTADO DEL UPLOAD DESPUES DE REINSTALAR EL DRIVER
+Se restauro la configuracion normal:
+--before=default_reset
+
+El build completo termino correctamente, con solo warnings de librerias y una variable sin uso. El resultado de memoria fue:
+RAM: 15.1%
+Flash: 80.5%
+
+El upload volvio a fallar:
+
+CURRENT: upload_protocol = esptool
+Using manually specified: COM6
+Connecting.....................................................
+ERROR: A fatal error occurred: Failed to connect to ESP32: No serial data received.
+
+CONCLUSION TECNICA
+COM6 existe, el adaptador CP210x esta instalado y el puerto puede abrirse. PlatformIO compila correctamente y esptool logra transmitir paquetes. Sin embargo, no llega ninguna respuesta desde el ESP32.
+
+El problema ya no apunta a platformio.ini, al build ni al driver. Las causas restantes son:
+
+- El ESP32 no entra realmente en modo bootloader.
+- El boton BOOT o EN/RST no corresponde a la placa o no funciona.
+- La placa no esta alimentada correctamente.
+- La linea TX0 del ESP32 no llega al CP210x.
+- Hay un problema de cableado, TX/RX o GND.
+- El USB de la notebook laboral o una politica corporativa interfiere con la comunicacion serial.
+
+PROXIMAS PRUEBAS RECOMENDADAS
+1. Probar otro ESP32 conocido en esta notebook.
+2. Probar esta misma placa y el mismo cable en la notebook personal.
+3. Desconectar todo circuito externo y dejar solo el USB.
+4. Si el CP210x es externo, hacer loopback uniendo TX y RX con el ESP32 desconectado.
+5. Si el CP210x esta integrado en la placa, no puentear TX/RX directamente; usar otro adaptador USB-UART.
+6. Revisar alimentacion, TX0, RX0, GND, GPIO0 y EN/RST.
+
+COMANDO PARA VERIFICAR PUERTOS
+[System.IO.Ports.SerialPort]::GetPortNames()
+
+COMANDO PARA VERIFICAR SI COM6 ESTA LIBRE
+$p = New-Object System.IO.Ports.SerialPort 'COM6',115200,None,8,one
+$p.Open()
+'COM6 ABIERTO'
+$p.Close()
+
+COMANDO PARA LIBERAR PROCESOS PLATFORMIO HOME SI VUELVEN A OCUPAR EL PUERTO
+Get-CimInstance Win32_Process |
+  Where-Object { $_.CommandLine -match 'platformio.*home' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+
+ESTADO FINAL
+El proyecto compila. COM6 es detectado. El driver CP210x oficial esta instalado. El upload falla porque el ESP32 no responde por serial. No se recomienda seguir modificando platformio.ini hasta probar otro ESP32, otro adaptador o la notebook personal.

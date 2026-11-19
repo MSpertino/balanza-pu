@@ -10,7 +10,7 @@ test('API bloquea exceso, conserva datos al reiniciar y serializa creaciones', a
   const dir = await mkdtemp(join(tmpdir(), 'balanza-test-'));
   let child;
   async function start() {
-    child = spawn(process.execPath, ['server.js'], { env: { ...process.env, HOST: '127.0.0.1', PORT: '0', DATA_FILE: join(dir, 'sessions.json') }, stdio: ['ignore', 'pipe', 'pipe'] });
+    child = spawn(process.execPath, ['server.js'], { env: { ...process.env, HOST: '127.0.0.1', PORT: '0', DATA_FILE: join(dir, 'sessions.json'), DEVICES_FILE: join(dir, 'devices.json') }, stdio: ['ignore', 'pipe', 'pipe'] });
     return await new Promise((resolve, reject) => {
       let out = '', errors = '';
       const timer = setTimeout(() => reject(new Error('Timeout de inicio: ' + errors)), 10000);
@@ -41,6 +41,16 @@ test('API bloquea exceso, conserva datos al reiniciar y serializa creaciones', a
     assert.equal(recovered.entries[0].weightKg, 2.5); assert.equal(recovered.currentWeightKg, 0);
     assert.equal(recovered.validations.length, 2);
     const csv = await fetch(url + '/api/export.csv').then(r => r.text()); assert.ok(csv.includes('MAT-AGUA'));
+    const registration = await post('/api/devices/register', { deviceId: 'balanza-test', token: 'test-device-token', firmware: 'test' });
+    assert.equal(registration.status, 201);
+    const telemetry = await fetch(url + '/api/devices/balanza-test/telemetry', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device-Token': 'test-device-token' }, body: JSON.stringify({ weightKg: 0.5, stable: true, calibrated: true, tared: true }) });
+    assert.equal(telemetry.status, 200);
+    const devices = await fetch(url + '/api/devices').then(r => r.json());
+    assert.equal(devices[0].status, 'ONLINE'); assert.equal(devices[0].latest.weightKg, 0.5); assert.equal(devices[0].token, undefined);
+    const unauthorized = await fetch(url + '/api/devices/balanza-test/telemetry', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device-Token': 'wrong-token' }, body: JSON.stringify({ weightKg: 1 }) });
+    assert.equal(unauthorized.status, 401);
+    const live = await fetch(url + path + '/live-weight', { method: 'POST' });
+    assert.equal(live.status, 200); assert.equal((await live.json()).currentWeightKg, 0.5);
     const stored = JSON.parse(await readFile(join(dir, 'sessions.json'), 'utf8')); assert.equal(stored.sessions.length, 2);
   } finally {
     if (child) await stop();

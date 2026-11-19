@@ -81,7 +81,7 @@ Publicar en intranet, documentar operación y seguridad, y conectar el formato a
 
 ## Actualización 10/11/2026 — reglas de la reunión
 
-La documentación base vigente es [el PDF](./_documentacion_base.pdf). Esta actualización reemplaza las suposiciones anteriores del prototipo sobre peso de poliol, tolerancias fijas y datos volátiles:
+La documentación base vigente es [el PDF](../_documentacion_base.pdf). Esta actualización reemplaza las suposiciones anteriores del prototipo sobre peso de poliol, tolerancias fijas y datos volátiles:
 
 - Poliol ingresado manualmente; referencia de fórmula de 190 kg. Poliol e isocianato se validan y registran fuera de la balanza de aditivos.
 - Objetivos proporcionales sin redondeo intermedio y tolerancia porcentual por aditivo.
@@ -90,3 +90,30 @@ La documentación base vigente es [el PDF](./_documentacion_base.pdf). Esta actu
 - Persistencia local en JSON; lógica de negocio exclusivamente en el servidor.
 
 Las recetas y porcentajes incluidos siguen siendo demostrativos. Falta confirmar recetas reales, identificación de materiales, procedimiento de jarras, precisión del hardware y permisos para uso en planta. La selección de proveedor/versiones y el registro detallado de cantidades de isocianato quedan pendientes.
+
+## Actualización 16/11/2026 — recipientes independientes
+
+La balanza de aditivos no trabaja con un único recipiente acumulativo. Cada aditivo se pesa en un recipiente diferente; luego los recipientes se vuelcan juntos para formar el sólido final.
+
+- La lectura registrada es el **peso neto del aditivo del recipiente actual**, no el peso acumulado del sólido.
+- El operador debe retirar el recipiente anterior, colocar el próximo recipiente vacío y pulsar **Tarar recipiente** antes de cargar el siguiente material.
+- La pantalla debe mostrar en forma destacada **Siguiente material: [nombre]**, junto con su objetivo y rango permitido.
+- **OK** registra solamente el aditivo actual y reinicia la lectura y la tara a `0 kg`; el siguiente aditivo comienza desde cero.
+- El sistema no debe permitir confirmar si el peso está por debajo o por encima de la tolerancia.
+- El orden de la fórmula es el orden de pesaje y queda auditado.
+
+En el simulador, para cada material se ingresa la lectura del recipiente actual, se actualiza, se verifica el rango, se registra, se vuelve la lectura a cero para simular el retiro del recipiente y se tara el recipiente siguiente. El PDF original se conserva como documento fuente; esta especificación editable contiene las actualizaciones funcionales del prototipo.
+
+## Actualización 18/11/2026 — configuración de fórmulas
+
+Se agrega una pantalla independiente de configuración, accesible desde la pantalla principal mediante **Configurar fórmulas**. Su objetivo es que el responsable cargue la receta sin modificar el código del sistema y que el operador pueda mantener abierta la pantalla de configuración junto con la pantalla de pesaje.
+
+- Cada fórmula se identifica por código SAP y nombre.
+- La fórmula define una referencia de poliol en kg para calcular proporciones.
+- Los materiales se agregan en el orden de pesaje.
+- Cada material contiene código, nombre, cantidad de referencia en kg y tolerancia porcentual.
+- Guardar una fórmula nueva o existente la persiste en `data/formulas.json` y la publica en el selector de la pantalla de formulación.
+- Al iniciar una formulación se copia la receta vigente; cambios posteriores no alteran formulaciones ya iniciadas.
+- El acceso de configuración queda separado visualmente del flujo operativo de pesaje. En una etapa productiva deberá restringirse por rol de administrador o responsable de proceso.
+
+El PDF original se conserva sin modificación como documento fuente. Esta especificación editable registra el comportamiento implementado hasta contar con una herramienta aprobada para editar o regenerar el PDF oficial.

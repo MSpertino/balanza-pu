@@ -8,8 +8,10 @@
 #include <WiFiClientSecure.h>
 #include <math.h>
 
-constexpr int PIN_DOUT = 23;
-constexpr int PIN_SCK = 22;
+// HX711 conectado segun el cableado actual:
+// DT/DOUT -> GPIO22, SCK -> GPIO23.
+constexpr int PIN_DOUT = 22;
+constexpr int PIN_SCK = 23;
 constexpr int PIN_BUTTON = 25;
 constexpr unsigned long WIFI_TIMEOUT_MS = 20000;
 constexpr unsigned long TELEMETRY_INTERVAL_MS = 1000;
@@ -107,14 +109,18 @@ void handleCommand(String input) {
 void setup() {
   Serial.begin(115200); pinMode(PIN_BUTTON, INPUT_PULLUP); prefs.begin("balanza", false);
   ssid = prefs.getString("ssid", ""); password = prefs.getString("pass", ""); api = prefs.getString("api", ""); token = prefs.getString("token", "demo-device-token"); deviceId = prefs.getString("device", "balanza-01");
-  countsPerGram = prefs.getFloat("counts_g", 0); scale.begin(PIN_DOUT, PIN_SCK); lastSample = millis(); if (!connectWifi()) startPortal(); event("ready_tare_empty_scale_with_T");
+  countsPerGram = prefs.getFloat("counts_g", 0); scale.begin(PIN_DOUT, PIN_SCK); scale.set_gain(128); lastSample = millis();
+  Serial.printf("{\"event\":\"hx711_config\",\"dout\":%d,\"sck\":%d}\n", PIN_DOUT, PIN_SCK);
+  if (!connectWifi()) startPortal(); event("ready_tare_empty_scale_with_T");
 }
 void loop() {
-  if (portalMode) { dns.processNextRequest(); portal.handleClient(); delay(2); return; }
+  // El portal WiFi y la lectura del HX711 pueden funcionar simultaneamente.
+  // Antes el return impedia probar la celda hasta configurar WiFi.
+  if (portalMode) { dns.processNextRequest(); portal.handleClient(); }
   while (Serial.available()) { char c = Serial.read(); if (c == '\n' || c == '\r') { handleCommand(command); command = ""; } else if (command.length() < 64) command += c; }
   unsigned long now = millis(); updateButton(now); registerDevice(); if (operation != Operation::None && now - operationStarted > 5000) { operation = Operation::None; event("operation_timeout"); }
   if (scale.is_ready()) {
-    int dout = digitalRead(PIN_DOUT); long raw = scale.read(); lastSample = now; samples[sampleIndex] = raw; sampleIndex = (sampleIndex + 1) % WINDOW; if (sampleCount < WINDOW) ++sampleCount;
+    int doutLevel = digitalRead(PIN_DOUT); long raw = scale.read(); lastSample = now; samples[sampleIndex] = raw; sampleIndex = (sampleIndex + 1) % WINDOW; if (sampleCount < WINDOW) ++sampleCount;
     if (operation != Operation::None) {
       sum += raw;
       if (++collected == static_cast<int>(WINDOW)) {
@@ -125,7 +131,7 @@ void loop() {
       }
     }
     bool stable = false; if (countsPerGram != 0 && tared && sampleCount == WINDOW) { long low = samples[0], high = samples[0]; for (size_t i = 1; i < WINDOW; ++i) { low = min(low, samples[i]); high = max(high, samples[i]); } stable = (static_cast<double>(high) - low) / fabsf(countsPerGram) <= STABLE_RANGE_G; }
-    sendTelemetry(raw, stable); if (now - lastReport >= 100) { lastReport = now; Serial.printf("{\"raw\":%ld,\"stable\":%s,\"btn\":%s}\n", raw, stable ? "true" : "false", buttonPressed ? "true" : "false"); }
+    sendTelemetry(raw, stable); if (now - lastReport >= 100) { lastReport = now; Serial.printf("{\"raw\":%ld,\"dout_level\":%d,\"stable\":%s,\"btn\":%s}\n", raw, doutLevel, stable ? "true" : "false", buttonPressed ? "true" : "false"); }
   } else if (now - lastSample >= 2000 && now - lastReport >= 1000) { lastReport = now; event("hx711_timeout"); }
   delay(1);
 }

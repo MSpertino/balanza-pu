@@ -1,5 +1,5 @@
 // Recetas ilustrativas: reemplazar por valores aprobados en planta.
-export const products = [
+export let products = [
   { code: 'SAP-001', name: 'PU demostración A', referencePolyolKg: 190, formula: [
     { material: 'MAT-AGUA', name: 'Agua', referenceKg: 2.5, tolerancePct: 2 },
     { material: 'MAT-ADITIVO', name: 'Aditivo A', referenceKg: 0.5, tolerancePct: 4 }
@@ -9,6 +9,9 @@ export const products = [
     { material: 'MAT-ADITIVO', name: 'Aditivo B', referenceKg: 0.5, tolerancePct: 3 }
   ] }
 ];
+export function setProducts(next) {
+  products = structuredClone(next);
+}
 const check = (ok, message) => { if (!ok) throw new Error(message); };
 export function createSession(input, id) {
   const recipe = products.find(p => p.code === input.productCode);
@@ -19,16 +22,19 @@ export function createSession(input, id) {
     recipe: structuredClone(recipe), operator: String(input.operator || 'Operador demo'), status: 'INICIADA',
     startedAt: new Date().toISOString(), polyolKg: input.polyolKg,
     validations: ['POLIOL', 'ISOCIANATO'].map(material => ({ material, confirmed: true, at: new Date().toISOString() })),
-    simulatedWeightKg: 0, zeroOffsetKg: 0, entries: [], audit: [] };
+    simulatedWeightKg: 0, zeroOffsetKg: 0, needsTare: false, entries: [], audit: [] };
 }
 export function view(s) {
   const entries = s.entries.filter(e => !e.voidedAt);
   const steps = s.recipe.formula.map(item => ({ ...item, targetKg: s.polyolKg * item.referenceKg / s.recipe.referencePolyolKg }));
   const currentStep = steps[entries.length] || null;
-  const currentWeightKg = s.simulatedWeightKg - s.zeroOffsetKg;
+  const currentWeightKg = Math.max(0, s.simulatedWeightKg - s.zeroOffsetKg);
   let signal = 'COMPLETO', message = 'Todos los materiales están registrados.';
   let minKg = null, maxKg = null;
-  if (currentStep) {
+  if (currentStep && s.needsTare) {
+    signal = 'AMARILLO';
+    message = 'Retirá el recipiente anterior, colocá el siguiente recipiente vacío y pulsá Tarar recipiente.';
+  } else if (currentStep) {
     minKg = currentStep.targetKg * (1 - currentStep.tolerancePct / 100);
     maxKg = currentStep.targetKg * (1 + currentStep.tolerancePct / 100);
     const epsilon = Number.EPSILON * Math.max(1, Math.abs(s.simulatedWeightKg), Math.abs(maxKg)) * 8;
@@ -36,9 +42,9 @@ export function view(s) {
     message = signal === 'ROJO' ? 'Exceso de peso. Retirá material o reiniciá este aditivo.' : signal === 'AMARILLO' ? 'Falta material para alcanzar la tolerancia.' : 'Peso dentro de tolerancia. Podés confirmar.';
   }
   return { ...s, currentWeightKg, steps, currentStep, minKg, maxKg, signal, message,
-    canRecord: s.status === 'INICIADA' && !!currentStep && signal === 'VERDE',
+    canRecord: s.status === 'INICIADA' && !!currentStep && !s.needsTare && signal === 'VERDE',
     canFinish: s.status === 'INICIADA' && !currentStep, canReset: s.status === 'INICIADA',
-    canZero: s.status === 'INICIADA' && s.entries.length === 0 && signal !== 'ROJO' };
+    canZero: s.status === 'INICIADA' && !!currentStep && signal !== 'ROJO' };
 }
 export function action(s, type, input = {}) {
   check(s.status === 'INICIADA', 'La formulación ya está finalizada.');
@@ -49,13 +55,18 @@ export function action(s, type, input = {}) {
   } else if (type === 'zero') {
     check(before.canZero, 'Tara bloqueada. En rojo debés retirar el exceso; para corregir usá reiniciar aditivo.');
     s.zeroOffsetKg = s.simulatedWeightKg;
+    s.needsTare = false;
   } else if (type === 'record') {
     check(input.expectedMaterial === before.currentStep?.material, 'El paso cambió. Actualizá la pantalla antes de confirmar.');
     check(before.canRecord, before.currentStep ? 'Peso fuera de tolerancia: no se puede confirmar.' : 'Todos los materiales ya fueron registrados.');
     s.entries.push({ id: `P-${s.entries.length + 1}`, material: before.currentStep.material, name: before.currentStep.name,
       weightKg: before.currentWeightKg, targetKg: before.currentStep.targetKg, tolerancePct: before.currentStep.tolerancePct,
       recordedAt: at, scaleKg: s.simulatedWeightKg, tareBeforeKg: s.zeroOffsetKg });
-    s.zeroOffsetKg = s.simulatedWeightKg;
+    // Cada aditivo vive en un recipiente independiente. Al confirmar,
+    // dejamos la balanza lista para que el siguiente empiece desde cero.
+    s.simulatedWeightKg = 0;
+    s.zeroOffsetKg = 0;
+    s.needsTare = false;
   } else if (type === 'reset') {
     const last = s.entries.filter(e => !e.voidedAt).at(-1);
     if (input.material === before.currentStep?.material && before.currentStep.material !== 'POLIOL') {

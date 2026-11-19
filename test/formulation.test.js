@@ -22,28 +22,26 @@ test('amarillo y rojo bloquean OK; rojo bloquea tara; límites inclusivos', () =
   weigh(s, 2.449); assert.equal(view(s).signal, 'AMARILLO');
   weigh(s, 2.551); assert.equal(view(s).signal, 'ROJO');
 });
-test('OK tara y evita confirmación duplicada; finalización bloquea cambios', () => {
+test('cada aditivo parte de cero y evita confirmación duplicada', () => {
   const s = fresh(); assert.throws(() => action(s, 'finish'));
-  weigh(s, 2.5); record(s); assert.equal(view(s).currentWeightKg, 0);
+  weigh(s, 2.5); record(s); assert.equal(view(s).currentWeightKg, 0); assert.equal(view(s).currentStep.name, 'Aditivo A');
   assert.throws(() => action(s, 'record', { expectedMaterial: 'MAT-AGUA' }));
-  assert.throws(() => action(s, 'zero'));
-  weigh(s, 3); record(s); action(s, 'finish');
+  weigh(s, 0.5); record(s); assert.equal(view(s).currentWeightKg, 0); action(s, 'finish');
   assert.equal(s.status, 'FINALIZADA'); assert.throws(() => weigh(s, 4));
 });
 test('reinicio conserva otros aditivos e historial y requiere retiro físico', () => {
-  const s = fresh(); weigh(s, 2.5); record(s); weigh(s, 3.5);
+  const s = fresh(); weigh(s, 2.5); record(s); weigh(s, 0.5);
   assert.throws(() => action(s, 'reset', { material: 'MAT-ADITIVO' }));
-  weigh(s, 2.5); action(s, 'reset', { material: 'MAT-ADITIVO' });
+  weigh(s, 0); action(s, 'reset', { material: 'MAT-ADITIVO' });
   assert.equal(s.entries.length, 1);
-  weigh(s, 3); record(s);
-  assert.throws(() => action(s, 'reset', { material: 'MAT-ADITIVO' }));
-  weigh(s, 2.5); action(s, 'reset', { material: 'MAT-ADITIVO' });
+  weigh(s, 0.5); record(s);
+  action(s, 'reset', { material: 'MAT-ADITIVO' });
   assert.ok(s.entries[1].voidedAt); assert.equal(view(s).currentStep.material, 'MAT-ADITIVO');
-  weigh(s, 3); record(s); assert.equal(s.entries.length, 3);
+  weigh(s, 0.5); record(s); assert.equal(s.entries.length, 3);
   assert.equal(s.entries[0].voidedAt, undefined);
 });
 test('rechaza pesos inválidos y carga pendiente al cerrar', () => {
   const s = fresh(); for (const weight of [-1, NaN, Infinity, '', null]) assert.throws(() => weigh(s, weight));
-  weigh(s, 2.5); record(s); weigh(s, 3); record(s); weigh(s, 3.1);
+  weigh(s, 2.5); record(s); weigh(s, 0.5); record(s); weigh(s, 0.1);
   assert.throws(() => action(s, 'finish'));
 });

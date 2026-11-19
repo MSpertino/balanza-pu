@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configurar fórmulas | Balanza</title><link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div><p class="eyebrow">PLANTA · CONFIGURACIÓN</p><h1>Fórmulas de producción</h1><p class="muted">Armá la receta que el operador va a seguir en la pantalla de pesaje.</p></div>
+      <a class="secondary" href="/">Volver a la balanza</a>
+    </header>
+    <section class="card formula-layout">
+      <div>
+        <h2>Nueva fórmula</h2>
+        <p class="hint">Definí un código SAP, la referencia de poliol y los materiales en el orden en que se van a pesar. Podés editar o eliminar fórmulas guardadas.</p>
+        <form id="formula-form">
+          <div class="form-grid">
+            <label>Código SAP<input id="code" required placeholder="SAP-003" maxlength="32"></label>
+            <label>Nombre de fórmula<input id="name" required placeholder="PU línea 1"></label>
+            <label>Poliol de referencia (kg)<input id="reference-polyol" type="number" min="0.001" step="any" value="190" required></label>
+          </div>
+          <div class="formula-materials-head"><h3>Materiales y aditivos</h3><button type="button" class="secondary" id="add-material">+ Agregar material</button></div>
+          <div id="materials" class="materials"></div>
+          <p id="formula-error" class="error" role="alert"></p>
+          <div class="actions"><button type="submit">Guardar fórmula</button><button type="button" class="secondary hidden" id="cancel-edit">Cancelar edición</button></div>
+        </form>
+      </div>
+      <aside class="formula-help">
+        <strong>Cómo se calcula</strong>
+        <p>Ejemplo: si la receta indica 2,5 kg de agua para 190 kg de poliol y la planta usa 95 kg, el objetivo será 1,25 kg de agua.</p>
+        <p>La cantidad de cada fila es la de la referencia de poliol. Al iniciar una formulación, el sistema la escala proporcionalmente al poliol real.</p>
+        <p>El orden de las filas será el orden de pesaje. La tolerancia se aplica a cada material.</p>
+      </aside>
+    </section>
+    <section class="card">
+      <h2>Fórmulas disponibles</h2>
+      <div id="formula-list" class="formula-list"><p class="muted">Cargando…</p></div>
+    </section>
+  </main>
+  <script type="module" src="/formulas.js"></script>
+</body>
+</html>

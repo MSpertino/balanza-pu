@@ -5,7 +5,12 @@
   "description": "MVP local de formulación y trazabilidad con balanza digital",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "start:lan": "set HOST=0.0.0.0&& node server.js"
+  },
+  "dependencies": {
+    "@serialport/parser-readline": "^12.0.0",
+    "serialport": "^12.0.0"
   },
   "engines": {
     "node": ">=20"

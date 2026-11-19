@@ -17,13 +17,15 @@ Abrir http://localhost:3000. También se puede usar `npm start` o hacer doble cl
 1. Elegir producto e ingresar manualmente los kg de poliol (base 190 kg; atajos de entero, medio y tres cuartos).
 2. Confirmar la validación de poliol e isocianato, dosificados fuera de esta balanza.
 3. Pesar los aditivos en orden. Objetivo = cantidad original × kg de poliol / 190, sin redondeo intermedio. Cada aditivo tiene tolerancia porcentual propia.
-4. Amarillo: falta material. Verde: dentro del rango inclusivo. Rojo: exceso. Solo verde permite OK. OK registra y aplica tara automáticamente. La tara inicial queda bloqueada en rojo.
+4. Amarillo: falta material. Verde: dentro del rango inclusivo. Rojo: exceso. Solo verde permite OK. Cada recipiente se pesa por separado y OK reinicia la lectura a cero. La tara queda disponible para el próximo recipiente.
 5. Para reiniciar el aditivo actual, retirar su material hasta volver a cero; el resto se conserva. Para repetir el último confirmado, recuperar primero su lectura total anterior. La pesada anterior se anula y conserva en el historial y CSV.
 6. Finalizar requiere todos los aditivos confirmados y ninguna carga pendiente.
 
-Las recetas SAP-001 y SAP-002, cantidades y tolerancias son **ejemplos inventados**, no fórmulas aprobadas. Editarlas en `src/formulation.js` cuando estén disponibles las recetas reales. Cada preparación guarda una copia de la receta utilizada. El cálculo conserva la precisión de JavaScript; la pantalla muestra hasta seis decimales en kg.
+Antes de iniciar una formulación, el operador o responsable puede abrir **Configurar fórmulas** desde la pantalla principal. Allí crea o actualiza una receta con código SAP, nombre, poliol de referencia y materiales ordenados; cada material tiene cantidad de referencia y tolerancia. La fórmula queda guardada en `data/formulas.json` y aparece luego en la pantalla de inicio para ser pesada.
 
-El simulador recibe lectura total acumulada: con receta SAP-001 y 190 kg de poliol, ingresar 2,5 kg de agua, OK y luego 3 kg totales para el aditivo de 0,5 kg. El indicador neto vuelve a cero con cada OK. El mecanismo de jarras independientes y la resolución real se deben validar antes de conectar hardware.
+Las recetas SAP-001 y SAP-002, cantidades y tolerancias son **ejemplos inventados**, no fórmulas aprobadas. Cada preparación guarda una copia de la receta utilizada. El cálculo conserva la precisión de JavaScript; la pantalla muestra hasta seis decimales en kg.
+
+El simulador recibe el peso neto del recipiente actual: con receta SAP-001 y 190 kg de poliol, ingresar 2,5 kg de agua, OK y luego 0,5 kg para el siguiente aditivo. El indicador vuelve a cero con cada OK. La integración Wi‑Fi del ESP32 está documentada en [`docs/arquitectura-wifi.md`](docs/arquitectura-wifi.md).
 
 ## Datos
 
@@ -41,11 +43,11 @@ $env:PORT = '3000'
 node server.js
 ```
 
-Acceder desde otra máquina con `http://IP-DEL-SERVIDOR:3000`. El acceso requiere conectividad y regla de firewall. Autenticación, permisos y conexión ESP32/HX711 están pendientes. `DATA_FILE` permite elegir otra ruta de almacenamiento.
+Acceder desde otra máquina con `http://IP-DEL-SERVIDOR:3000`. Para que el ESP32 llegue al servidor, usar `npm run start:lan` o `iniciar-servidor.cmd`, que escucha en todas las interfaces. El acceso requiere conectividad y regla de firewall. La API de dispositivo usa token en `X-Device-Token`; autenticación de usuarios, permisos y Nginx/HTTPS quedan para producción. `DATA_FILE` permite elegir otra ruta de almacenamiento.
 
 ## Prueba inicial de hardware
 
-El proyecto PlatformIO y las instrucciones de conexión, carga, tara y calibración están en [firmware-balanza](firmware-balanza/README.md). Esta prueba utiliza el monitor serie; la integración de sus lecturas con la web está pendiente.
+El proyecto PlatformIO y las instrucciones de conexión, carga, tara, calibración y portal Wi‑Fi están en [`firmware-balanza/README.md`](firmware-balanza/README.md). El dashboard muestra el estado de la balanza y permite tomar la última lectura Wi‑Fi en la formulación activa.
 
 ## Pruebas de la aplicación
 

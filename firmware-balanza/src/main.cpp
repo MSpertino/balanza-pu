@@ -1,12 +1,15 @@
 #include <Arduino.h>
+#include <Adafruit_NeoPixel.h>
 #include <HX711.h>
 #include <Preferences.h>
 #include <math.h>
 
 // Pines confirmados fisicamente segun el diagrama de Lionel.
-constexpr int PIN_DOUT = 23;
-constexpr int PIN_SCK = 22;
-constexpr int PIN_BUTTON = 25; // Pulsador entre GPIO 25 y GND (activo en LOW).
+constexpr int PIN_DOUT = 22;
+constexpr int PIN_SCK = 23;
+constexpr int PIN_LED_STRIP = 25; // Datos de la tira direccionable.
+constexpr int LED_COUNT = 14;
+constexpr double LED_COUNTS_PER_STEP = 5000.0; // Indicador relativo hasta calibrar en gramos.
 constexpr unsigned long BUTTON_DEBOUNCE_MS = 30;
 bool buttonPressed = false;
 bool buttonCandidate = false;
@@ -14,6 +17,7 @@ unsigned long buttonChangedAt = 0;
 constexpr size_t WINDOW = 10;
 constexpr float STABLE_RANGE_G = 1.0f; // Umbral inicial, no precision certificada.
 HX711 scale;
+Adafruit_NeoPixel ledStrip(14, PIN_LED_STRIP, NEO_GRB + NEO_KHZ800);
 Preferences settings;
 long samples[WINDOW] = {};
 size_t sampleCount = 0, sampleIndex = 0;
@@ -29,16 +33,31 @@ unsigned long operationStarted = 0, lastSample = 0, lastReport = 0;
 String command;
 
 void updateButton(unsigned long now) {
-  bool pressed = digitalRead(PIN_BUTTON) == LOW;
-  if (pressed != buttonCandidate) {
-    buttonCandidate = pressed;
-    buttonChangedAt = now;
-  }
-  if (now - buttonChangedAt >= BUTTON_DEBOUNCE_MS) buttonPressed = buttonCandidate;
+  (void)now;
+  buttonPressed = false;
 }
 
 void event(const char *name) {
   Serial.printf("{\"event\":\"%s\"}\n", name);
+}
+
+void showRelativeLoad(long raw) {
+  ledStrip.clear();
+  if (!tared) {
+    ledStrip.show();
+    return;
+  }
+
+  double delta = fabs(static_cast<double>(raw) - zeroOffset);
+  int lit = static_cast<int>(delta / LED_COUNTS_PER_STEP);
+  if (delta > 500.0 && lit < 1) lit = 1;
+  lit = constrain(lit, 0, LED_COUNT);
+
+  for (int i = 0; i < lit; ++i) {
+    uint32_t color = i < LED_COUNT - 3 ? ledStrip.Color(0, 40, 0) : ledStrip.Color(40, 20, 0);
+    ledStrip.setPixelColor(i, color);
+  }
+  ledStrip.show();
 }
 
 void startOperation(Operation next) {
@@ -72,7 +91,20 @@ void handleCommand(String input) {
 
 void setup() {
   Serial.begin(115200);
-  pinMode(PIN_BUTTON, INPUT_PULLUP);
+  ledStrip.begin();
+  ledStrip.clear();
+  ledStrip.show();
+  ledStrip.fill(ledStrip.Color(40, 0, 0));
+  ledStrip.show();
+  delay(1000);
+  ledStrip.clear();
+  ledStrip.show();
+  pinMode(PIN_LED_STRIP, OUTPUT);
+  digitalWrite(PIN_LED_STRIP, LOW);
+  pinMode(PIN_SCK, OUTPUT);
+  digitalWrite(PIN_SCK, LOW);
+  pinMode(PIN_DOUT, INPUT_PULLUP);
+  Serial.printf("{\"event\":\"hx711_pin_probe\",\"dout_pullup\":%s}\n", digitalRead(PIN_DOUT) == LOW ? "LOW" : "HIGH");
   settings.begin("balanza", false);
   countsPerGram = settings.getFloat("counts_g", 0);
   if (!isfinite(countsPerGram)) countsPerGram = 0;
@@ -100,12 +132,13 @@ void loop() {
     int doutLevel = digitalRead(PIN_DOUT);
     long raw = scale.read();
     lastSample = now;
+    showRelativeLoad(raw);
     if (raw <= -8388607L || raw >= 8388606L) {
       operation = Operation::None;
       sampleCount = 0;
       if (now - lastReport >= 100) {
         lastReport = now;
-        Serial.printf("{\"hx711_ready\":true,\"dout_before_read\":%s,\"g\":null,\"raw\":%ld,\"stable\":false,\"btn\":%s,\"error\":\"hx711_saturated\"}\n", doutLevel == LOW ? "LOW" : "HIGH", raw, buttonPressed ? "true" : "false");
+        Serial.printf("{\"hx711_ready\":true,\"dout_before_read\":\"%s\",\"g\":null,\"raw\":%ld,\"stable\":false,\"btn\":%s,\"error\":\"hx711_saturated\"}\n", doutLevel == LOW ? "LOW" : "HIGH", raw, buttonPressed ? "true" : "false");
       }
       delay(1);
       return;
@@ -146,7 +179,7 @@ void loop() {
         }
         stable = (static_cast<double>(high) - low) / fabsf(countsPerGram) <= STABLE_RANGE_G;
       }
-      Serial.printf("{\"hx711_ready\":true,\"dout_before_read\":%s,\"g\":", doutLevel == LOW ? "LOW" : "HIGH");
+      Serial.printf("{\"hx711_ready\":true,\"dout_before_read\":\"%s\",\"g\":", doutLevel == LOW ? "LOW" : "HIGH");
       if (valid) Serial.print((static_cast<double>(raw) - zeroOffset) / countsPerGram, 2);
       else Serial.print("null");
       Serial.printf(",\"raw\":%ld,\"stable\":%s,\"btn\":%s,\"calibrated\":%s,\"tared\":%s}\n",
@@ -154,7 +187,7 @@ void loop() {
     }
   } else if (now - lastSample >= 2000 && now - lastReport >= 1000) {
     lastReport = now;
-    Serial.printf("{\"hx711_ready\":false,\"dout\":%s,\"g\":null,\"raw\":null,\"stable\":false,\"btn\":%s,\"error\":\"hx711_timeout\"}\n", digitalRead(PIN_DOUT) == LOW ? "LOW" : "HIGH", buttonPressed ? "true" : "false");
+    Serial.printf("{\"hx711_ready\":false,\"dout\":\"%s\",\"g\":null,\"raw\":null,\"stable\":false,\"btn\":%s,\"error\":\"hx711_timeout\"}\n", digitalRead(PIN_DOUT) == LOW ? "LOW" : "HIGH", buttonPressed ? "true" : "false");
   }
   delay(1);
 }

@@ -5,9 +5,29 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .amarillo { color: #6d4b00; background: #fff5ca; border-color: #b58800; }
 .rojo { color: #982c25; background: #ffe7e4; border-color: #c74136; }
 .notice { color: #6d4b00; background: #fff5ca; border-radius: 10px; padding: 14px; }
+.device-status { margin: 8px 0 0; font-weight: 800; font-size: .9rem; }
+.device-status.online { color: #23764b; }
+.device-status.offline { color: #9a6a00; }
+.simulator-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .voided { opacity: .65; text-decoration: line-through; }
 details { margin-top: 24px; } summary { cursor: pointer; font-weight: 700; }
 #start-card label { display: block; margin: 12px 0 6px; }
 .finish, .actions { flex-wrap: wrap; }
 #gross { font-size: .85rem; color: #a9c4b3; }
 input[type="checkbox"] { width: auto; margin-right: 8px; }
+.top-nav { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.form-grid label, .material-row label { display: block; font-weight: 700; }
+.form-grid input, .material-row input { margin-top: 7px; }
+.formula-materials-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
+.formula-materials-head h3 { margin: 0; }
+.material-row { display: grid; grid-template-columns: 1.1fr 1.4fr .9fr .8fr auto; gap: 10px; align-items: end; padding: 14px 0; border-bottom: 1px solid #e4ebe6; }
+.remove-material { padding: 10px 12px; }
+.formula-layout { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 28px; }
+.formula-help { background: #f5f8f5; border-radius: 12px; padding: 18px; color: #466154; }
+.formula-help p { font-size: .9rem; line-height: 1.5; }
+.formula-item { border-bottom: 1px solid #e4ebe6; padding: 15px 0; display: grid; gap: 10px; }
+.formula-item p { margin: 5px 0 0; }
+.formula-tag { display: inline-block; background: #e7eee9; color: #22583f; border-radius: 999px; padding: 7px 10px; margin: 3px 4px 3px 0; font-size: .85rem; }
+.formula-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 750px) { .form-grid, .material-row, .formula-layout { grid-template-columns: 1fr; } .top-nav { justify-content: flex-start; } }
